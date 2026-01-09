@@ -1,0 +1,148 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+#pragma kernel updateCopyBlack
+
+// Create a RenderTexture with enableRandomWrite flag-so that the compute shader can directly modify it-and set it with cs.SetTexture
+
+// indexed in terms of pixels not UV space, so dont need to normalize final coordinates
+RWTexture2D<float2> UVMap;
+
+RWTexture2D<float2> copyBlackRenderTexture;
+// Structure of rewardBuffer:
+// rewardBuffer[0] = the current reward value
+// rewardBuffer[1] = whether the pattern has been fully traced out and the task is 1, either 0 or 1
+// rewardBuffer[2] = the number of pattern coordinates remaining
+// rewardBuffer[3] = the index of the next closest pattern vertex
+
+RWStructuredBuffer<int> rewardBuffer;
+StructuredBuffer<float3> Positions;
+
+uint tot_vertCount;
+float maxDistance;
+float3 playerPosition;
+int xDimensions;
+
+
+
+[numthreads(8,8,1)]
+// uint3 is a Vector3, this parameter is the index of the vertex
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // y is height and x is width, y is the outer forloop, x is the inner forloop
+    uint xIndex = id.x;
+    uint yIndex = id.y;
+    // skips the middle vertices, so just quads, goes one by one
+    uint index = (2 * xDimensions - 1) * yIndex + xIndex;
+    float blend;
+
+    if (index >= tot_vertCount) return;
+
+    float3 position = Positions[index];
+    float xDist = playerPosition.x - position.x;
+    float zDist = playerPosition.z - position.z;
+    float dist = sqrt(xDist * xDist + zDist * zDist);    
+    
+    int vertexIndex = rewardBuffer[3];
+
+    // creates a circle of damage around laser
+    if (dist <= maxDistance)
+    {
+        // if the current UVMap coordinate has not been damaged and corresponds to the next closest pattern vertex
+        if (UVMap[int2(xIndex, yIndex)].x == 0.0f && index == (uint)vertexIndex)
+        {
+            InterlockedAdd(rewardBuffer[0], 2);
+        }
+        blend = 1.0f;
+        
+    }
+    else
+    {
+        blend = 0.0f;
+        //blend = pow(saturate(1.0f - dist / maxDistance), 1.0f / 5.0f);
+    }
+
+    // write result to output 2D texture
+    UVMap[int2(xIndex, yIndex)] = float2(max(UVMap[int2(xIndex, yIndex)].x, blend), 0.0f);
+    
+}
+
+
+
+
+[numthreads(8,8,1)]
+void updateCopyBlack (uint3 id : SV_DispatchThreadID)
+{
+    int2 coord = int2(id.xy);
+    
+    // calculates reward and update copyBlackRenderTexture accordingly
+    if (UVMap[coord].x != 0)
+    {
+        // if in this if statement, then already looking at damaged skin
+        if (copyBlackRenderTexture[coord].x != 0.5f)
+        {
+            // if it is zero so healthy skin
+            if (abs(copyBlackRenderTexture[coord].x) < 0.001f)
+            {
+                InterlockedAdd(rewardBuffer[0], -5);
+            }
+        }
+            
+        copyBlackRenderTexture[coord] = float2(0.5f, 0.0);
+    }
+    
+
+    // checks whether the entire pattern is fully traced or not
+    // calculates the percentage of pattern traced
+    if (id.x == 0 && id.y == 0 && id.z == 0)
+    {
+        int ones = 0;
+        bool done = true;
+        float minDist = -1.0f;
+        int minIndex;
+        
+        for (int i = 0; i < 28; i++)
+        {
+            for (int j = 0; j < 60; j++)
+            {
+                // if it is a pattern spot
+                if (abs(copyBlackRenderTexture[int2(j, i)].x - 1.0f) < 0.001f)
+                {
+                    done = false;
+                    ones++;
+
+                    // check distance to player and whether it is minimum distance
+                    int index = (2 * xDimensions - 1) * i + j;
+                    float3 position = Positions[index];
+                    float xDist = playerPosition.x - position.x;
+                    float zDist = playerPosition.z - position.z;
+                    float dist = sqrt(xDist * xDist + zDist * zDist);
+
+                    if (minDist == -1.0f)
+                    {
+                        minDist = dist;
+                        minIndex = index;
+                    }
+                    else
+                    {
+                        if (dist < minDist)
+                        {
+                            minDist = dist;
+                            minIndex = index;
+                        }
+                            
+                    }
+                }
+            }
+        }
+        
+        if (done == true)
+        {
+            rewardBuffer[1] = 1;
+        }
+
+        rewardBuffer[2] = ones;
+        rewardBuffer[3] = minIndex;
+
+    }
+        
+}
