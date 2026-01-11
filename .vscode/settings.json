@@ -52,5 +52,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "laser_simulation.sln"
+    "dotnet.defaultSolution": "Unity-Real-Time-Soft-Tissue-Simulation-With-RL-Trained-Policy-for-Laser-Ablation.sln"
 }
