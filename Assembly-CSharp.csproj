@@ -47,7 +47,6 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.46f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\FollowPlayer.cs" />
     <Compile Include="Assets\Scripts\AgentScript.cs" />
     <Compile Include="Assets\Scripts\MeshHandle.cs" />
     <Compile Include="Assets\Scripts\DynamicDamageManager.cs" />
@@ -55,6 +54,7 @@
     <Compile Include="Assets\MassSpringSystem\Assets\Scripts\SpringSystem\MassSpawner.cs" />
     <Compile Include="Assets\Scripts\SetupCameraViewports.cs" />
     <Compile Include="Assets\Scripts\PlayerController.cs" />
+    <Compile Include="Assets\Scripts\FollowPlayer.cs" />
     <Compile Include="Assets\MassSpringSystem\Assets\Scripts\UI\CanvasTouchManager.cs" />
     <Compile Include="Assets\Scripts\rando.cs" />
     <Compile Include="Assets\Scripts\CollisionHandle.cs" />
