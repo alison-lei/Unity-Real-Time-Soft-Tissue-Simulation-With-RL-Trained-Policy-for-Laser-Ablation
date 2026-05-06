@@ -1,12 +1,8 @@
 ﻿#pragma kernel CSMainPos
 #pragma kernel CSMainVel
-//#pragma target 4.0
 
 #define thread_group_size_x 4
 #define thread_group_size_y 4
-
-// #define thread_group_size_x 8
-// #define thread_group_size_y 8
 
 //================================================================================================
 // Summary
@@ -21,8 +17,6 @@
  * the velocity of that vertex according to the acceleration.
  */
 
-/** The position, velocity and force structs hold 3D positions, velocity and force vectors for individual points on the grid. 
- */
 struct Position
 {
     float3 pos;
@@ -48,24 +42,6 @@ struct Neighbours
     float2 neighbours[12];
 };
 
-/** The properties struct holds the physical properties of the grid
-  *
-  * The mass of individual mass points in the mass spring model.
-  * Increasing this will make the mass points more resistive to
-  * the springs in the model, but will also reduce their velocity.  
-  *
-  * The level of damping in the system. Increasing this value
-  *  will cause the system to return to a more 'stable' state quicker,
-  *  and will reduce the propagation of forces throughout the grid.  
-  *  
-  * The stiffness of the spings in the grid. Increasing this will
-  *  cause mass points to 'rebound' with higher velocity, and will
-  *  also decrease the time taken for the system to return to a
-  *  'stable' state.
-  *
-  * The lenght of the springs in the grid. This defines how far
-  *  each mass unit is at a resting state.
-  */
 struct Properties
 {
     float mass;
@@ -79,7 +55,6 @@ struct DeltaTime
     float deltaTime;
 };
 
-// array of structs
 RWStructuredBuffer<Position>   posBuffer;
 RWStructuredBuffer<Velocity>   velBuffer;
 RWStructuredBuffer<Force>      externalForcesBuffer;
@@ -93,12 +68,9 @@ const float3 getForceForNeighbour (const int idx, const int2 nIdx, const float s
 {
     float3 d      = posBuffer[nIdx.x * nIdx.y].pos - posBuffer[idx].pos; 
     float dLength = length(d);
-    // avoid division by 0.
     float divisor = dLength + ((float) (dLength == 0.0f));
     float3 dN     = d / (divisor == 0.0f ? 1.0f : divisor);
-    // This calculates how much the current spring vector d differs from the ideal/rest vector (with magnitude = springLength in the direction of d):
     float3 force  = stiffness * (d - springLength * dN) + dampingFactor * (velBuffer[nIdx.x].vel - velBuffer[idx.x].vel);
-    // nIdx.y is a flag indicating whether that index exists within the grid bounds (1.0f or 0.0f).
     return force *  nIdx.y;
 }
 
@@ -116,10 +88,9 @@ void CSMainVel (uint3 id : SV_DispatchThreadID)
      *  MassSpringSystem script.
      */
 
-	//number of points per side, per thread.
     const int gX = 15;
     const int gY = 7;
-    //grid side resolution
+
     const int sX = gX * thread_group_size_x;
     const int sY = gY * thread_group_size_y;
 
@@ -128,9 +99,7 @@ void CSMainVel (uint3 id : SV_DispatchThreadID)
     const float  stiffness     = propertiesBuffer[0].springStiffness;
     const float  springLength  = propertiesBuffer[0].springLength;
 
-    //get the index of the vertex in the overall grid.
     const int idx    = id.x + id.y * thread_group_size_x * gX;
-    //max index is the number of vertices in our grid.
     const int maxIdx = sX * sY;
 
     int2 northNeighbour     = neighboursBuffer[idx].neighbours [0];
@@ -147,8 +116,6 @@ void CSMainVel (uint3 id : SV_DispatchThreadID)
     int2 southBendNeighbour = neighboursBuffer[idx].neighbours [10];
     int2 westBendNeighbour  = neighboursBuffer[idx].neighbours [11];
 
-    /** Our grid is structured to have rigid, non-moving edges.
-     */
     const float notEdge = (float) (northBendNeighbour.y && eastBendNeighbour.y && westBendNeighbour.y && southBendNeighbour.y);
     
     const float3 northForce      = getForceForNeighbour (idx, northNeighbour,     stiffness, springLength, damping);

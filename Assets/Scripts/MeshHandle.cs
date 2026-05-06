@@ -18,7 +18,6 @@ public class MeshHandle : MonoBehaviour
     float cutDepthScalpel, cutDepth;
     public Vector3 playerPos;
     private Dictionary<int, float> cutList;
-    //public bool trainingMode = false;
 
 
     private int spread = 10;
@@ -43,27 +42,12 @@ public class MeshHandle : MonoBehaviour
     public GameObject Scalpel;
     private int x;
     private int y;
-    // private int? lastReward = null;
-    // public float realCut = 0.0f;
-    // public Vector3 vertexUnderneath;
     public bool spaceBar = false;
-    // private float damageAgain = 0.0f;
     public bool allInitialized = false;
     private bool dealedDamage = false;
     public PlayerController playerController;
     public GameObject quad;
     public Vector3[] initialpositions;
-
-
-
-    // void Awake()
-    // {
-    //     uvComputeShader = Instantiate(uvComputeShader);
-    //     // if (shader_graph_material != null)
-    //     // {
-    //     //     shader_graph_material = Instantiate(shader_graph_material); 
-    //     // }
-    // }
 
 
     void Start()
@@ -74,14 +58,6 @@ public class MeshHandle : MonoBehaviour
         {
             initialpositions[i] = new Vector3(initialpositions[i].x, initialpositions[i].z, initialpositions[i].y);
         }
-
-        // doubling the size of the mesh, not good, computationally too expensive
-        // xDimensions = 120;
-        // zDimensions = 56;
-
-        // original dimensions, public variables defined above
-        // xDimensions = 60;
-        // zDimensions = 28;
 
         mesh = new Mesh();
         mesh.name = gameObject.name;
@@ -147,7 +123,6 @@ public class MeshHandle : MonoBehaviour
         uvComputeShader.SetTexture(updateBlack_kernelID, "UVMap", uvRenderTexture);
         uvComputeShader.SetTexture(updateBlack_kernelID, "copyBlackRenderTexture", copyBlackRenderTexture);
 
-        //Debug.Log(1f / Time.deltaTime);
         allInitialized = true;
 
     }
@@ -174,14 +149,6 @@ public class MeshHandle : MonoBehaviour
 
         Vector3 fixedPlayerPos = new Vector3(playerPos.x + xDimensions / 2, playerPos.y, playerPos.z + zDimensions / 2);
         uvComputeShader.SetVector("playerPosition", playerPos);
-        
-        // Debugging for multiple environments to train faster
-        // Debug.Log("player position " +playerPos);
-        // Debug.Log("player pos local " + Scalpel.transform.localPosition);
-        // Debug.Log("quad pos global " + quad.transform.position);
-        // Debug.Log("quad pos local " + quad.transform.localPosition);
-        // Debug.Log(fixedPlayerPos);
-        // Debug.Log("environment " + playerController.envOrigin);
 
         verts = mesh.vertices;
 
@@ -204,26 +171,15 @@ public class MeshHandle : MonoBehaviour
                 }
                 if (cutDepth > playerPos.y && j == (int)(fixedPlayerPos.x) && i == (int)(fixedPlayerPos.z))
                 {
-
-                    
-                    // damageAgain = 0.0f;
                     int num = 0;
                     for (int k = idx - (xDimensions * spread); k <= idx + (xDimensions * spread); k += xDimensions)
                     {
                         for (int l = num * -1; l < spread * 2 - num; l++)
                         {
-                            //Debug.Log(k + l);
-                            // this checks whether the stuff you calculate is in bounds or not
-
                             if (k + l < vertCount && 0 <= k + l)
                             {
-                                // Debug.Log("pass");
                                 if (spaceBar)
                                 {
-                                    // newIndex = 0f;
-                                    // realCut = 1.0f;
-                                    // uvComputeShader.SetVector("playerPosition", playerPos);
-                                    // uvComputeShader.Dispatch(uv_kernelID, x, y, 1);
                                     if (!dealedDamage)
                                         DealDamage();
                                     CalcVertHeight(verts[k + l], k + l);
@@ -235,28 +191,20 @@ public class MeshHandle : MonoBehaviour
                         }
                         num++;
                     }
-                    // if (damageAgain != 0.0f)
-                    // {
-                    //     agentScript.HitAgain(Mathf.Clamp(damageAgain / 100.0f, -1f, 1f));
-                    //     // Debug.Log("hello"+damageAgain);
-                    // }
-
+                    
                 }
                 count++;
             }
         }
 
-        // Debug.Log("this is player position" + playerPos.y);
         foreach (var pair in cutList)
         {
             verts[pair.Key].y += pair.Value;
         }
 
-
         mesh.vertices = verts;
         mesh.RecalculateBounds();
         meshFilter.mesh = mesh;
-
 
         spaceBar = false;
         dealedDamage = false;
@@ -276,7 +224,6 @@ public class MeshHandle : MonoBehaviour
     }
 
 
-
     void CalcVertHeight(Vector3 vertex, int index)
     {
         
@@ -286,29 +233,18 @@ public class MeshHandle : MonoBehaviour
         {
             if (depth < cutList[index])
             {
-                // if (cutList[index] - depth > 1.5f)
-                // damageAgain -= 0.1f;
                 cutList[index] = depth;
-                // if (gaussValue > 0.8)
-                //     damageAgain -= 0.1f;
-                // Debug.Log("this is depth" + depth);
             }
         }
         else
         {
             cutList.Add(index, depth);
-            // if (depth < -0.1)
-            //     newIndex = newIndex + 0.001f;
         }
-
-        
     }
 
     // relative to center of mesh, get the position of tip of scalpel
     public void FixPlayerPosition()
     {
-        //playerPos.y -= 12f;
-        // playerPos = Scalpel.transform.position - playerController.envOrigin;
         playerPos = Scalpel.transform.localPosition - quad.transform.localPosition;
         playerPos.y = playerPos.y - 7.0f;
     }
@@ -324,7 +260,7 @@ public class MeshHandle : MonoBehaviour
             for (int j = 0; j < xDimensions; j++)
             {
                 vertices[GetIndex(j, i)] = new Vector3(positions[count].x, positions[count].z, positions[count].y);
-                if (j < xDimensions - 1 && i < zDimensions - 1) // last line is not double
+                if (j < xDimensions - 1 && i < zDimensions - 1)
                     vertices[GetIndex(j + xDimensions, i)] = new Vector3(positions[count].x + 0.5f, positions[count].z, positions[count].y + 0.5f);
                 count++;
 
@@ -408,16 +344,6 @@ public class MeshHandle : MonoBehaviour
 
         return gaussianValue;
     }
-
-    // Helps for visualtization when debugging
-    // void OnGUI()
-    // {
-    //     if (copyBlackRenderTexture != null)
-    //     {
-    //         GUI.DrawTexture(new Rect(10, 90, 500, 500), copyBlackRenderTexture, ScaleMode.ScaleToFit);
-    //         // GUI.DrawTexture(new Rect(10, 10, 128, 128), uvRenderTexture, ScaleMode.ScaleToFit);
-    //     }
-    // }
 
     private void OnDestroy()
     {

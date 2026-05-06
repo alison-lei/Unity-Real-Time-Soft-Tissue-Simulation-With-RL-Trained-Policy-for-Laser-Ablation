@@ -94,11 +94,7 @@ public class MassSpringSystem : MonoBehaviour
      */
     public MassSpawner Spawner;
 
-    /** The controller of the touch and mouse input handler object.
-     */
-    // public CanvasTouchManager UITouchHandler;
     public CollisionHandle ToolCollisions;
-    // public GameObject chooseToolPanel;
 
     /** This is the force that will be applied from touch and mouse 
      *  input events on the grid.
@@ -106,83 +102,41 @@ public class MassSpringSystem : MonoBehaviour
     [Range(0.0f, 1000.0f)] public float MaxTouchForce = 100.0f;
 
     /** Various ComputeBuffer variables are used to read and write data to and from the compute 
-     *  shader (MassSpringComputeShader). 
+     *  shader (MassSpringComputeShader)
      */
     private ComputeBuffer debugBuffer;
     private ComputeBuffer propertiesBuffer;
-    // We fill a buffer of grid neigbour positions and send it to the compute buffer on intialisation, such that 
-    // we have access to neughbouring positions in our compute kernels. The neighbours buffer is a buffer of Vector2
-    // elements, where the x of each element is the neighbour position and the y is whether that position exists within
-    // the bounds of the grid.
     private ComputeBuffer neighboursBuffer; 
     private ComputeBuffer deltaTimeBuffer;
     private ComputeBuffer positionBuffer;
     private ComputeBuffer velocityBuffer;
     private ComputeBuffer externalForcesBuffer;
 
-    /** Our compute shader runs the same kernels in parallel on mutliple blocks of our
-     *  mass spring grid. These blocks are of dimensions gridUnitSideX by gridUnitSideY,
-     *  and there are numThreadsPerGroupX blocks along the x dimension of our grid and
-     *  numThreadsPerGroupY along the Y dimension.
-     *  
-     *  These values MUST be identical to the gX and gY values in the MassSpringCompute compute shader.
-     */
     private const int gridUnitSideX       = 15;
     private const int gridUnitSideY       = 7;
-    // private const int numThreadsPerGroupX = 8;
-    // private const int numThreadsPerGroupY = 8;
     private const int numThreadsPerGroupX = 4;
     private const int numThreadsPerGroupY = 4;
 
-    /** The resolution of our entire grid, according to the resolution and layout of the individual
-     *  blocks processed in parallel by the compute shader.
-     */
     private int GridResX;
     private int GridResY;
 
-    /** The total number of mass points (vertices) in the grid.
-     */ 
     public int VertCount;
 
     /** The two kernels in the compute shader for updating the positions and velocities, respectively. 
      */
     private int PosKernel;
     private int VelKernel;
-    // public AgentScript agentScript;
-    // private int counter;
-    // private Vector3 offset;
-    // public PlayerController playerController;
-    // public GameObject Environment;
-    // private Vector3 origin;
-    /** This material can used to render the mass points directly (rather than using game objects).
-     *  This material is instantiated using the RenderShader shader.
-     */
-    // private Material RenderMaterial;
-
-    //indexes of units that were cut
-    // private ArrayList cutList = new ArrayList();
-
-    //===========================================================================================
-    // Overrides
-    //===========================================================================================
+    
+    
     void Awake()
     {
-        // MassSpringComputeShader = Instantiate(MassSpringComputeShader);
-        // chooseToolPanel = GameObject.FindGameObjectWithTag("ChooseToolPanel");
         GridResX = gridUnitSideX * numThreadsPerGroupX;
         GridResY = gridUnitSideY * numThreadsPerGroupY;
         VertCount = GridResX * GridResY;
-        // CreateMaterialFromRenderShader();
+        
         CreateBuffers();
-        MassSpringComputeShader.SetBuffer(VelKernel/*PosKernel*/, SpringComputeShaderProperties.NeighboursBufferName, neighboursBuffer);
-        // Vector3[] positions = new Vector3[VertCount];
-        // positionBuffer.GetData(positions);
-        // Spawner.SetMassUnitSize(SpringLength);
-        // Spawner.SpawnPrimitives(positions);
-        // put those in start?
-        // offset = playerController.originoffset;
-        // origin = Environment.transform.position;
-        // counter = 0;
+        MassSpringComputeShader.SetBuffer(VelKernel, SpringComputeShaderProperties.NeighboursBufferName, neighboursBuffer);
+        
     }
 
     void Start()
@@ -196,24 +150,10 @@ public class MassSpringSystem : MonoBehaviour
 
     void Update ()
     {
-        // if (chooseToolPanel.activeSelf == false)
-        // {
         HandleTouches();
         Dispatch();
-        // UpdatePrimitivePositions();
-        //}
     }
 
-    /* This function can be used for graphical debugging puproses,
-     * or if you simply want to render the mass points as points rather
-     * than maintaining game objects.
-    */
-    
-    // void OnPostRender ()
-    // {
-    //     Dispatch ();
-    //     RenderDataPoints ();
-    // }
 
     private void OnDestroy()
     {
@@ -263,13 +203,13 @@ public class MassSpringSystem : MonoBehaviour
         velocityBuffer       = new ComputeBuffer (VertCount, sizeof (float) * 3);
         externalForcesBuffer = new ComputeBuffer (VertCount, sizeof (float) * 3);
         debugBuffer          = new ComputeBuffer (VertCount, sizeof (float) * 3);
-        neighboursBuffer     = new ComputeBuffer (VertCount, sizeof (float) * 24); //12 float pairs (Vector2) position, inside grid or not
+        neighboursBuffer     = new ComputeBuffer (VertCount, sizeof (float) * 24);
         propertiesBuffer     = new ComputeBuffer (SpringComputeShaderProperties.NumProperties, sizeof (float));
         deltaTimeBuffer      = new ComputeBuffer (1, sizeof (float));
         
         ResetBuffers();
 
-        PosKernel = MassSpringComputeShader.FindKernel (SpringComputeShaderProperties.PosKernel); // this gives the string name
+        PosKernel = MassSpringComputeShader.FindKernel (SpringComputeShaderProperties.PosKernel);
         VelKernel = MassSpringComputeShader.FindKernel (SpringComputeShaderProperties.VelKernel);
     }
 
@@ -289,8 +229,6 @@ public class MassSpringSystem : MonoBehaviour
         {
             float x = ((i % GridResX - GridResX / 2.0f) / GridResX) * GetWorldGridSideLengthX();
             float y = ((i / GridResX - GridResY / 2.0f) / GridResY) * GetWorldGridSideLengthY();
-            // z is up
-            // positions[i]  = origin + new Vector3 (x, y, 0.0f);
             positions[i]  = new Vector3 (x, y, 0.0f);
             velocities[i] = new Vector3 (0.0f, 0.0f, 0.0f);
             extForces[i]  = new Vector3 (0.0f, 0.0f, 0.0f);
@@ -327,34 +265,6 @@ public class MassSpringSystem : MonoBehaviour
         if (neighboursBuffer != null)
             neighboursBuffer.Release();
     }
-
-    // void CreateMaterialFromRenderShader()
-    // {
-    //     if (RenderShader != null)
-    //         RenderMaterial = new Material (RenderShader);
-    //     else 
-    //         Debug.Log ("Warning! Attempting to initialise MassSpringSystem without setting the Shader variable.");
-    // }
-
-    /** Calculate our entire grid resolution and vertex count from the structure of the compute shader.
-     *  Create our render material, and initialise and fill our compute buffers. Send the vertex neighbour 
-     *  positions to the compute shader (we only need to do this once, whereas the position and velocities
-     *  need to be sent continuously). Finally, we get the initial positions from the compute buffer and use
-     *  them to spawn our game objects using the Spawner.
-     */
-    // public void Initialise()
-    // {
-    //     GridResX  = gridUnitSideX * numThreadsPerGroupX;
-    //     GridResY  = gridUnitSideY * numThreadsPerGroupY;
-    //     VertCount = GridResX * GridResY; 
-    //     // CreateMaterialFromRenderShader();
-    //     CreateBuffers();
-    //     MassSpringComputeShader.SetBuffer (VelKernel/*PosKernel*/, SpringComputeShaderProperties.NeighboursBufferName, neighboursBuffer);
-    //     Vector3[] positions  = new Vector3[VertCount];
-    //     positionBuffer.GetData (positions);
-    //     Spawner.SetMassUnitSize (SpringLength);
-    //     Spawner.SpawnPrimitives (positions);
-    // }
 
     //===========================================================================================
     // Touch Input
@@ -443,15 +353,7 @@ public class MassSpringSystem : MonoBehaviour
                 flag = westNeighbourExists (idx, GridResX) ? 1.0f : 0.0f;
             else if (i == 11)
                 flag = westBendNeighbourExists (idx, GridResX) ? 1.0f : 0.0f;
-            // for (int j = 0; j < cutList.Count; j++)
-            // {
-            //     if (j == idx)
-            //     {
-            //         flag = 0.0f;
-            //     }
-            // }
-            // if (cutList.Contains(idx))
-            //     flag = 0.0f;
+
             neighbourFlagPairs[i] = new Vector2(idx, flag);
         }
 
@@ -474,22 +376,8 @@ public class MassSpringSystem : MonoBehaviour
         { 
             Vector3 f = extForces[index];
             extForces[index] = new Vector3 (0.0f, 0.0f, MaxTouchForce * pressure * -1.0f);
-            //Debug.Log(pressure);
-            // if (pressure > 0.7f)
-            // {
-            //     cutList.Add(index);
-            // }
         }
     }
-
-    /** Gets the neighbouring positions of a mass index and applies reduced pressure to them.
-     */
-    // public void ApplyPressureToNeighbours (int index, float pressure, ref Vector3[] extForces)
-    // {
-    //     int[] neighbours = GetNeighbours (index);
-    //     foreach (int i in neighbours)
-    //         ApplyPressureToMass (i, pressure * 0.5f, ref extForces);
-    // }
 
     /** Takes in an existing touch or mouse event and transforms it into pressure to be applied at
      *  a specific point on the grid.
@@ -508,8 +396,6 @@ public class MassSpringSystem : MonoBehaviour
 
         ApplyPressureToMass(index, pressure, ref extForces);
 
-        
-        // ApplyPressureToNeighbours (index, pressure, ref extForces);
     }
 
     /** Called continuously by the update function to transform input data to grid forces.
@@ -520,19 +406,12 @@ public class MassSpringSystem : MonoBehaviour
         for (int i = 0; i < VertCount; i++)
             extForces[i] = new Vector3 (0.0f, 0.0f, 0.0f);
 
-        // counter++;
-        // if (counter % 300 == 0)
-        //     AnimateGrid(20f, ref extForces);
-        // foreach (Vector3 gridTouch in UITouchHandler.GridTouches)
-        //     UITouchInputUpdated (gridTouch.x, gridTouch.y, gridTouch.z, ref extForces);
-
-        // toolTouches is the list of interactions made by scalpel and stick - the two lines below were added by A.K.
         foreach (Vector3 toolTouch in ToolCollisions.ToolTouches)
             UITouchInputUpdated(toolTouch.x, toolTouch.y, toolTouch.z, ref extForces);
 
         externalForcesBuffer.SetData (extForces);
         ToolCollisions.ToolTouches.Clear();
-        // UITouchHandler.GridTouches.Clear();
+
     }
 
     //===========================================================================================
@@ -562,18 +441,9 @@ public class MassSpringSystem : MonoBehaviour
         MassSpringComputeShader.SetBuffer (VelKernel, SpringComputeShaderProperties.PositionBufferName,       positionBuffer);
     }
 
-    // void UpdatePrimitivePositions()
-    // {
-    //     Vector3[] positions = new Vector3[VertCount];
-    //     positionBuffer.GetData (positions);
-
-    //     if (Spawner != null)
-    //         Spawner.UpdatePositions (positions);
-    // }
 
     void Dispatch()
     {
-        // SetGridPropertiesAndTime();
         
         SetVelocityBuffers();
         MassSpringComputeShader.Dispatch  (VelKernel, gridUnitSideX, gridUnitSideY, 1);
@@ -582,47 +452,6 @@ public class MassSpringSystem : MonoBehaviour
         MassSpringComputeShader.Dispatch  (PosKernel, gridUnitSideX, gridUnitSideY, 1);
 
     }
-
-    //===========================================================================================
-    // Rendering
-    //===========================================================================================
-
-    /*
-     * If you want to use this to debug the positions, you need to override OnPostRender() instead of Update().
-     */
-    // void RenderDataPoints()
-    // {
-    //     RenderMaterial.SetPass (0);
-    //     RenderMaterial.SetBuffer (MassSpringRenderShaderProperties.DebugBuffer, debugBuffer);
-    //     RenderMaterial.SetBuffer (MassSpringRenderShaderProperties.PositionsBuffer, positionBuffer);
-    //     RenderMaterial.SetBuffer (MassSpringRenderShaderProperties.VelocityBuffer, velocityBuffer);
-    //     Graphics.DrawProceduralNow (MeshTopology.Points, VertCount);
-    // }
-
-    //===========================================================================================
-    // Animation
-    //===========================================================================================
-
-    /** This function can be used to simulate some movement on the grid.
-     *  It should be called continuously (e.g. in the Update or OnPostRender
-     *  functions).
-     */
-    // void AnimateGrid(float pressure, ref Vector3[] extForces)
-    // {
-    //     // Vector3[] velocities = new Vector3[VertCount];
-    //     // velocityBuffer.GetData (velocities);
-    //     // float gestureTime = 1.0f;
-    //     // float damp = Time.time < gestureTime? (gestureTime - Time.time) / gestureTime : 0.0f;
-    //     // float amp = 20.0f;
-    //     // float freq = 0.1f;
-    //     // for (int i = 2 * GridResX + 2; i < 3 * GridResX - 2; i++)
-    //     //     velocities[i] = new Vector3 (0.0f, 0.0f, Mathf.Sin (Time.time * freq) * damp * amp);
-    //     // velocityBuffer.SetData (velocities);
-    //     int number = Random.Range(0, agentScript.patternIndices.Count);
-    //     int randVertInd = agentScript.patternIndices[number];
-    //     ApplyPressureToMass(randVertInd, pressure, ref extForces);
-    // }
-
 
     
 }

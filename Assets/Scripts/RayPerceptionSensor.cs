@@ -38,23 +38,8 @@ public class RayPerceptionSensor : MonoBehaviour
             {
                 Vector3 p = hit.collider.gameObject.transform.position;
                 ToolTouches.Add(new Vector3(p.x, p.z, pressure));
-                // if (transform.position.y < p.y + toolDepth)
-                // {
-                //     ToolTouches.Add(new Vector3(p.x, p.z, pressure));
-                // }
-
             }
         }
     }
-
-    // void OnTriggerEnter(Collider other)
-    // {
-    //     if (other.CompareTag("boundary"))
-    //     {
-    //         agentScript.rewardFunction(-5f);
-    //     }
-        
-    // }
-
 
 }

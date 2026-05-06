@@ -43,11 +43,3 @@ public class CollisionHandle : MonoBehaviour
         }
     }
 }
-        // if (other.CompareTag("MassUnit"))
-        // {
-        //     Vector3 p = other.gameObject.transform.localPosition - quad.transform.localPosition;
-        //     if ((transform.localPosition - quad.transform.localPosition).y - toolDepth < p.y)
-        //     {
-        //         ToolTouches.Add(new Vector3(p.x, p.z, pressure));
-        //     }
-        // }
