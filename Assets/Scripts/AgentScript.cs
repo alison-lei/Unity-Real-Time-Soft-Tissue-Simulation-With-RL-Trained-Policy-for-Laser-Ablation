@@ -23,7 +23,6 @@ public class AgentScript : Agent
 
     public bool doneTrace = false;
     public float? lastReward = null;
-    // private int stepCounter; do this only if want to access reward every 10 steps
     private float onesLeft;
     private float totalPatternPixels;
     public RenderTexture ovalShaderPattern;
@@ -36,32 +35,21 @@ public class AgentScript : Agent
 
     
     private Vector3 startPos;
-    // private int campingThresholdSteps = 300;
-    // private float perStepPenalty = -0.002f;
-    // private float oneTimePenalty = -0.1f;
-    // private float campingSteps = 0;
-    // private bool oneTimePenaltyApplied = false;
-    private float radiusSqr = 16f; //4**2
+    private float radiusSqr = 16f;
     private Vector3 vertexVector;
-    // public List<int> patternIndices;
     private bool laserOn = false;
     private float scoreIncrement = 1f;
-    // private float scoreDecay = 0.05f;
     private float campingPenalty = -0.1f;
     private float campingScore = 0f;
     private float campingThreshold = 250f;
     private int relocationCounter = 0;
-    public float relocationDistance = 25f; // Distance to count as relocation
+    public float relocationDistance = 25f;
     public int relocationSteps = 60;
-    // private float redoTimes = 0f;
-    // private float vertDistance = 0f;
     private bool calculateCloseVertex;
     private int Width = 60;
     private int Height = 28;
     private int edgeMargin = 8;
-    // private float percentageDone;
     private float lastPercentage;
-    // private float fulltotalreward = 0f;
     private float endTimeCounter = 0f;
     private int hitAgainCounter = 0;
     private bool activeAgain = false;
@@ -72,36 +60,12 @@ public class AgentScript : Agent
     /// Before incorporating this, agent would not go to the lesion and start ablating immediately before reaching the lesion
     /// Added it as an observation so agent learns to associate it with lesion area where the highest concentration of positive reward is
     /// </summary>
+    
     private float withinRadius;
-
-
 
 
     void Start()
     {
-        // stepCounter = 0;
-        // totalPatternPixels = 0.0f;
-        // patternIndices = new List<int>();
-
-        //////////////////////////////////////////////////////////////////////////////////////////
-        
-        // Generating a specific pattern uploaded from image onto the mesh
-        // Texture2D temporaryTexture = ResizeTexture(patternImage, meshHandle.xDimensions, meshHandle.zDimensions);
-
-        // Color[] pixels = temporaryTexture.GetPixels();
-        // foreach (Color c in pixels)
-        // {
-        //     // if (c.r > 0.999f)
-        //     if (c.r > 0.1f)
-        //     {
-        //         totalPatternPixels += 1.0f;
-        //         // patternIndices.Add(count);
-        //     }
-        //     // count++;
-        // }
-
-        //////////////////////////////////////////////////////////////////////////////////////////
-
         // setting the render texture to the shader graph
         // Use RGFloat because want two channels, 32-bit float each, store two values per coordinate
         ovalShaderPattern = new RenderTexture(meshHandle.xDimensions, meshHandle.zDimensions, 0, RenderTextureFormat.RGFloat);
@@ -109,16 +73,11 @@ public class AgentScript : Agent
         ovalShaderPattern.Create();
         shaderGraph.SetTexture("_ovalShaderPattern", ovalShaderPattern);
 
-
-
-
         totalPatternPixels = 0f;
 
-        // returns Texture2D data type
         fullPatternTexture = GenerateOval();
 
         onesLeft = totalPatternPixels;
-        // Debug.Log("total " + totalPatternPixels);
         vecDirection = Vector3.zero;
         gReward = 0f;
         calculateCloseVertex = false;
@@ -133,32 +92,15 @@ public class AgentScript : Agent
     private Texture2D ResizeTexture(Texture2D source, int width, int height)
     {
         RenderTexture rt = new RenderTexture(width, height, 0);
-        // change the filter mode of the render texture so blends neighboring 4 pixel values, good for shrinking image
         rt.filterMode = FilterMode.Bilinear;
 
         Graphics.Blit(source, rt);
 
         RenderTexture.active = rt;
-        Texture2D tempTex = new Texture2D(width, height, TextureFormat.RGBA32, false); // 8 bits per channel, 4 channels
-        // paste at point 0,0 of tempTex, read from point 0,0 (bottom left) of render texture rt
-        // read pixels from GPU to CPU
+        Texture2D tempTex = new Texture2D(width, height, TextureFormat.RGBA32, false);
         tempTex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         tempTex.Apply();
         RenderTexture.active = null;
-
-        // to count the total number of pattern pixels AND change the image from grayscale to purely black and white
-        // Color[] pixels = tempTex.GetPixels();
-        // for (int i = 0; i < pixels.Length; i++)
-        // {
-        //     float luminance = pixels[i].r;
-        //     pixels[i] = (luminance > 0.1f) ? Color.white : Color.black;
-        //     if (luminance > 0.1f)
-        //     {
-        //         totalPatternPixels += 1.0f;
-        //     }
-        // }
-        // tempTex.SetPixels(pixels);
-        // tempTex.Apply();
 
         return tempTex;
     }
@@ -168,7 +110,6 @@ public class AgentScript : Agent
     {
         Texture2D tex = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
 
-        // Fill background black
         Color[] pixels = new Color[Width * Height];
         for (int i = 0; i < pixels.Length; i++)
             pixels[i] = Color.black;
@@ -193,11 +134,9 @@ public class AgentScript : Agent
                 float dx = x - centerX;
                 float dy = y - centerY;
 
-                // Rotate point around center
                 float rotatedX = dx * Mathf.Cos(rad) - dy * Mathf.Sin(rad);
                 float rotatedY = dx * Mathf.Sin(rad) + dy * Mathf.Cos(rad);
 
-                // checking whether inside the ellipse equation
                 if ((rotatedX * rotatedX) / (rx * rx) + (rotatedY * rotatedY) / (ry * ry) <= 1f)
                 {
                     tex.SetPixel(x, y, Color.white);
@@ -205,15 +144,13 @@ public class AgentScript : Agent
                 }
             }
         }
-        // updates the mirrored copy of tex on GPU in order to then do Graphics.Blit()
+        
         tex.Apply();
 
         Graphics.Blit(tex, ovalShaderPattern);
 
         return tex;
     }
-
-
 
 
     public override void OnEpisodeBegin()
@@ -227,7 +164,6 @@ public class AgentScript : Agent
         withinRadius = 0f;
         meshHandle.allInitialized = false;
         massSpringSystem.ResetBuffers();
-        // reset agent and environment
         if (doneTrace)
             doneTrace = false;
         lastReward = null;
@@ -239,22 +175,14 @@ public class AgentScript : Agent
         meshHandle.ResetRTBuffers();
         playerController.resetBoundsFlag();
 
-        // scalpel.SetActive(true);
-        // if (trainingMode)
         gReward = 0f;
         startTime = Time.time;
 
-
-        // oneTimePenaltyApplied = false;
-        // campingSteps = 0;
         startPos = meshHandle.playerPos;
-        // redoTimes = 0f;
-        // meshHandle.newIndex = 0f;
 
         campingScore = 0f;
         relocationCounter = 0;
         lastPercentage = 0f;
-        // fulltotalreward = 0f;
         hitAgainCounter = 0;
 
         if (meshHandle.allInitialized)
@@ -284,16 +212,10 @@ public class AgentScript : Agent
             sensor.AddObservation(Vector3.Dot(vecDirection.normalized, new Vector3(horizontalInput, 0f, verticalInput).normalized)); // 1
         }
 
-        // Debug.DrawLine(meshHandle.playerPos, meshHandle.playerPos + vecDirection, Color.green);
-
-        // sensor.AddObservation(scalpel.transform.localPosition - meshHandle.quad.transform.localPosition); // 3
         sensor.AddObservation(meshHandle.playerPos); // 3
-
-        // CalculateHeight();
 
         lastPercentage = PercentageComplete();
         sensor.AddObservation(lastPercentage); // 1
-                                               // Debug.Log("% done = " + PercentageComplete());
 
         sensor.AddObservation(endTimeCounter);
         sensor.AddObservation(withinRadius);
@@ -304,49 +226,13 @@ public class AgentScript : Agent
     public override void OnActionReceived(ActionBuffers actions)
     {
 
-        // 1
-        // stepCounter++
-        // tanh [-1,1]
-        // horizontalInput = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f) * 0.5f;
-        // yMoveVec = Mathf.Clamp(actions.ContinuousActions[1], -1f, 1f) * 0.001f;
-        // verticalInput = Mathf.Clamp(actions.ContinuousActions[2], -1f, 1f) * 0.5f;
         horizontalInput = actions.ContinuousActions[0];
-        // yMoveVec = actions.ContinuousActions[1];
-        // verticalInput = actions.ContinuousActions[2];
         verticalInput = actions.ContinuousActions[1];
 
         if (horizontalInput != 0f || verticalInput != 0f)
             activeAgain = true;
 
-        // playerController.MoveLaser(horizontalInput, yMoveVec, verticalInput);
         playerController.MoveLaser(horizontalInput, verticalInput);
-
-        // float tempDist = meshHandle.Distance(meshHandle.playerPos, vertexVector);
-        // if (tempDist < vertDistance)
-        // {
-        //     AddReward(0.01f);
-        // }
-        // vertDistance = tempDist;
-
-        // 2
-        // if (float.IsNaN(meshHandle.vertexUnderneath.y))
-        // {
-        //     AddReward(-1f);
-        //     Debug.Log("the vertex directly underneath would freak out");
-        //     EndEpisode();
-        //     return;
-        // }
-
-        // bonus for moving in correct direction
-        // if (calculateCloseVertex && vecDirection == Vector3.zero)
-        // {
-        //     gReward += 0.01f;
-        //     // AddReward(0.01f);
-        // }
-        // else
-        // {
-        // Debug.Log(vecDirection + "dot" + new Vector3(horizontalInput, 0f, verticalInput));
-        // Debug.Log(Vector3.Dot(vecDirection, new Vector3(horizontalInput, 0f, verticalInput)));
 
         Vector3 lastMovement = new Vector3(horizontalInput, 0f, verticalInput);
         if (vecDirection != Vector3.zero && lastMovement != Vector3.zero)
@@ -355,28 +241,10 @@ public class AgentScript : Agent
             float dirBonus = Mathf.Clamp(0.001f * Vector3.Dot(vecDirection.normalized, lastMovement.normalized), 0f, 0.001f);
             if (dirBonus > 0.0001f)
             {
-
-                // if (trainingMode)
-                // {
-                //     gReward += dirBonus;
-                // }
                 gReward += dirBonus;
-                // AddReward(dirBonus);
-                // Debug.Log(dirBonus + " went nearest vertex !!!!!!!!!!!!!!!!!!!!!!!");
             }
-            // Debug.Log(dirBonus);
         }
 
-
-        // float newIndices = meshHandle.newIndex;
-        // if (newIndices != 0f)
-        // {
-        //     AddReward(newIndices);
-        //     meshHandle.newIndex = 0f;
-        //     // Debug.Log(newIndices);
-        // }
-
-        // actions.DiscretActions[0] is responsible for turning on the laser
         int activation = actions.DiscreteActions[0] == 1 ? 1 : 0;
         if (activation == 1 && activeAgain)
         {
@@ -388,7 +256,6 @@ public class AgentScript : Agent
         }
         if (meshHandle.playerPos.y < -1.0f)
             meshHandle.spaceBar = laserOn;
-
 
 
         // camping reward system
@@ -404,10 +271,6 @@ public class AgentScript : Agent
         if (campingScore >= campingThreshold)
         {
             gReward += campingPenalty;
-            // AddReward(campingPenalty);
-            // Debug.Log("surpassed camping threshold");
-
-            // resets the starting position to see if staring from this new position it camps again
             startPos = meshHandle.playerPos;
             campingScore = 0f;
         }
@@ -421,50 +284,15 @@ public class AgentScript : Agent
                 campingScore = 0f;           
                 relocationCounter = 0;
                 gReward += 0.005f;
-                // AddReward(0.005f);
-                // Debug.Log("new start position");
             }
         }
         else
         {
-            relocationCounter = 0; // Reset if back within distance, so need to be outside of relocationDistance for relocationSteps consecutive times
+            relocationCounter = 0;
         }
 
 
-
-        // Vector3 curPos = meshHandle.playerPos;
-        // float distSqr = (curPos - lastPos).sqrMagnitude;
-
-        // if (distSqr < radiusSqr)
-        // {
-        //     campingSteps++;
-        //     // AddReward(perStepPenalty);
-        //     // if (campingSteps >= campingThresholdSteps && !oneTimePenaltyApplied)
-        //     if (campingSteps % campingThresholdSteps == 0)
-        //     {
-        //         AddReward(oneTimePenalty); // one-time larger penalty
-        //         // oneTimePenaltyApplied = true;
-        //         // Debug.Log("too long /////////////////////////");
-        //     }
-
-        // }
-        // else
-        // {
-        //     campingSteps = 0;
-        //     // oneTimePenaltyApplied = false;
-        //     lastPos = curPos;
-        //     // Debug.Log("no camp");
-        // }
-        // Debug.DrawLine(lastPos, curPos, Color.red);
-        // Debug.Log(meshHandle.Distance(lastPos, curPos));
-
-
-
-        // in mesh handle, always run fixed update where the tissue is animated and damaged
-        // only calculate reward if traininig here
-        // updates rewardbuffer and gets reward
-        // decision period is 1
-        if (Time.frameCount % 4 == 0 && meshHandle.allInitialized/* && laserOn*/)
+        if (Time.frameCount % 4 == 0 && meshHandle.allInitialized)
         {
             meshHandle.CalculateReward();
             AsyncGPUReadback.Request(meshHandle.rewardBuffer, OnReadbackComplete);
@@ -479,26 +307,13 @@ public class AgentScript : Agent
         if (gReward != 0.0f)
         {
             AddReward(gReward);
-            // Debug.Log(gReward);
-            // fulltotalreward += gReward;
-            // Debug.Log(fulltotalreward);
         }
         gReward = 0f;
-
-        // if (stepCounter % 10 == 0)
-        // {
-        //     percentageComplete = 1.0f - (onesLeft / totalPatternPixels);
-        // }
         
         if (doneTrace || PercentageComplete() > 0.9f)
         {
             playerController.homePosition();
-            // Debug.Log("doneeeeeeeeeeeeeeeeee");
-            // flag
-            // gReward += 5.0f;
             AddReward(5.0f);
-            // Time.timeScale = 0;
-            // massSpringSystem.ReleaseBuffers(); CANNOT do this, only when gameplay ends as then start referencing nonexistant buffers by cpu and gpu
             ConsiderTime();
             EndEpisode();
         }
@@ -506,12 +321,7 @@ public class AgentScript : Agent
 
         if (playerController.outofBounds)
         {
-            // gReward += -2.0f;
-            // AddReward(-2.0f);
-            // if (scalpel.activeSelf == true)
-            //     scalpel.SetActive(false);
             playerController.homePosition();
-            // massSpringSystem.ReleaseBuffers();
             ConsiderTime();
             EndEpisode();
         }
@@ -526,32 +336,17 @@ public class AgentScript : Agent
         var discrete = actionsOut.DiscreteActions;
 
         continuous[0] = Input.GetAxis("Horizontal");
-        // if go up and down
-        // continuous[1] = Input.GetKey(KeyCode.Q) ? 1.0f : (Input.GetKey(KeyCode.E) ? -1.0f : 0.0f);
-        // continuous[2] = Input.GetAxis("Vertical");
         continuous[1] = Input.GetAxis("Vertical");
 
         discrete[0] = Input.GetKey(KeyCode.Space) ? 1 : 0;
-        // Debug.Log(discrete[0]);
     }
 
 
-    // Huge neg reward if overtime, only penalize
     public void ConsiderTime()
     {
         float timePunish = Mathf.Clamp(-Mathf.Pow(2f, 0.02f * (Time.time - startTime)) + 1f, -4f, 0f);
         gReward += timePunish;
     }
-
-
-    // private void CalculateHeight()
-    // {
-    //     // return height of scalpel above closest vertex point
-    //     scalpelHeightAboveTissue = scalpel.transform.position.y - meshHandle.vertexUnderneath.y;
-    //     tipHeightAboveTissue = meshHandle.playerPos.y - meshHandle.vertexUnderneath.y;
-    //     // Debug.DrawLine(new Vector3(0f, 1f, 0f), meshHandle.vertexUnderneath, Color.red);
-    // }
-
 
 
     private float PercentageComplete()
@@ -566,7 +361,7 @@ public class AgentScript : Agent
         float rewardValue = (float)result[0] / 40.0f;
         int done = result[1];
         onesLeft = (float)result[2];
-        vertexVector = meshHandle.verts[result[3]]; // had index outside of bounds of array error
+        vertexVector = meshHandle.verts[result[3]];
         float currentPercentage = PercentageComplete();
 
         if (lastReward == null)
@@ -574,12 +369,6 @@ public class AgentScript : Agent
             float clampReward = Mathf.Clamp(rewardValue, -4f, 2f);
             gReward += clampReward;
             lastReward = rewardValue;
-            // AddReward(clampReward);
-            // if (trainingMode)
-            // {
-            //     gReward = clampReward;
-            //     Debug.Log("gReward from normal damage " + gReward);
-            // }
         }
         else if (lastReward != rewardValue)
         {
@@ -587,16 +376,7 @@ public class AgentScript : Agent
 
             float clampReward = Mathf.Clamp(temp, -4f, 2f);
             gReward += clampReward;
-            // fulltotalreward += temp;
-            // Debug.Log(fulltotalreward);
-            // Debug.Log("gReward from normal damage " + gReward);
-            // AddReward(clampReward);
             lastReward = rewardValue;
-            // if (trainingMode)
-            // {
-            //     gReward += clampReward;
-            //     Debug.Log("gReward from normal damage " + gReward);
-            // }
 
         }
 
@@ -604,14 +384,12 @@ public class AgentScript : Agent
         // no damage on healthy tissue and didn't hit the closest vertex
         else if (laserOn && lastReward == rewardValue)
         {
-            // no change in the % of pattern hit but laser was on
             if (currentPercentage == lastPercentage)
             {
                 hitAgainCounter++;
                 if (hitAgainCounter % 10 == 0)
                 {
                     gReward += -0.007f;
-                    // Debug.Log("Hit again here ?//////////////////////////////");
                     hitAgainCounter = 0;
                 }
             }
@@ -625,14 +403,10 @@ public class AgentScript : Agent
         if (laserOn && currentPercentage != lastPercentage && withinRadius == 1f)
         {
             float delta = currentPercentage - lastPercentage;
-            // Debug.Log(currentPercentage + "  and " + percentageDone);
             if (delta > 0f)
             {
                 gReward += delta * 11f;
                 lastPercentage = currentPercentage;
-                // fulltotalreward += delta * 10f;
-                // Debug.Log("gReward here " + gReward);
-                // Debug.Log("helooo ////////////////////////////////");
             }
 
         }
@@ -648,19 +422,14 @@ public class AgentScript : Agent
 
 
         vecDirection = vertexVector - meshHandle.playerPos;
-        // Debug.Log("pos off vector "+vertexVector);
-        // Debug.Log("tool pos "+meshHandle.playerPos);
-        // Debug.Log("this is vecDirection "+vecDirection);
         vecDirection.y = 0f;
         
         if (vecDirection.magnitude < 2.5f && withinRadius == 0f)
         {
             withinRadius = 1f;
-            // Debug.Log("within radius is now true");
         }
         if (!calculateCloseVertex)
             calculateCloseVertex = true;
-        // Debug.Log(fulltotalreward);
     }
 
 
@@ -673,28 +442,3 @@ public class AgentScript : Agent
     }
 
 }
-
-
-    // public void HitAgain(float value)
-    // {
-    //     AddReward(value);
-    //     if (trainingMode)
-    //     {
-    //         gReward += value;
-    //         Debug.Log("from damage again new gReward" + gReward);
-    //     }
-
-    // }
-    
-
-    // public void DeterCamping(float value)
-    // {
-    //     AddReward(value);
-    //     if (trainingMode)
-    //     {
-    //         gReward += value;
-    //         Debug.Log("from damage again new gReward" + gReward);
-    //     }
-            
-    // }
-

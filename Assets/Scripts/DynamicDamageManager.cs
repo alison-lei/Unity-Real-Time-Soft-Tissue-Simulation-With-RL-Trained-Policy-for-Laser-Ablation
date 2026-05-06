@@ -75,18 +75,10 @@ public class DynamicDamageManager : MonoBehaviour
 
     }
 
-    // called once per event, many times per frame
-    // Graphical User Interface
-    // create and renders GUI elements during runtime
     void OnGUI()
     {
         if (damageMaskTexture != null)
         {
-            // use immediate mode GUI to draw texture onto the screen
-            // uses GUI class to call method inside it
-            // draws texture in top left corner of screen and the texture it draws is the damageMaskTexture RenderTexture
-            // it is red because the damageMaskTexture formate is RenderFormat.R8, uses only the red channel, for grayscale purposes,
-            // defaults to using those values for red chanels and leaves green and blue valeus as 0
             GUI.DrawTexture(new Rect(10, 10, 128, 128), damageMaskTexture);
         }
     }
